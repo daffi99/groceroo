@@ -42,21 +42,40 @@ export function App() {
     saveStoredItems(items);
   }, [items]);
 
-  // Initial cloud fetch from Neon when unlocked
+  // Initial cloud fetch from Neon & auto-refresh on focus/tab resume
   useEffect(() => {
     if (!isPinUnlocked) return;
 
-    fetchRemoteData().then((res) => {
-      if (res.synced) {
-        setIsCloudSynced(true);
-        if (res.categories && res.categories.length > 0) {
-          setCategories(res.categories);
+    const pullRemote = () => {
+      fetchRemoteData().then((res) => {
+        if (res.synced) {
+          setIsCloudSynced(true);
+          if (res.categories && res.categories.length > 0) {
+            setCategories(res.categories);
+          }
+          if (res.items && res.items.length > 0) {
+            setItems(res.items);
+          }
         }
-        if (res.items && res.items.length > 0) {
-          setItems(res.items);
-        }
+      });
+    };
+
+    pullRemote();
+
+    const handleFocus = () => pullRemote();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pullRemote();
       }
-    });
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isPinUnlocked]);
 
   // Sync to Neon when items change (debounced)
@@ -388,43 +407,27 @@ export function App() {
       )}
       </div>
 
-      {/* Floating Bottom Bar: Sleek Premium Action Pill */}
+      {/* Floating Bottom Bar: Clean & Minimal iOS Action Pill */}
       {viewMode === 'inventory' && (counts.out > 0 || counts.low > 0) && (
-        <div className="fixed bottom-5 left-4 right-4 max-w-md mx-auto z-20">
-          <div className="relative group">
-            {/* Ambient soft glow */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full blur-md opacity-40 group-hover:opacity-60 transition duration-300" />
-
-            {/* Main Interactive Button */}
-            <button
-              onClick={() => setViewMode('shopping')}
-              className="relative w-full py-2 px-3 sm:px-3.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:brightness-105 active:scale-[0.98] text-white rounded-full font-bold shadow-xl shadow-emerald-700/25 border border-white/25 flex items-center justify-between transition-all"
-            >
-              {/* Left: Lucide Icon + Title + Counter */}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shrink-0 border border-white/20 shadow-xs">
-                  <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
-                </div>
-                <div className="text-left truncate">
-                  <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-center gap-2">
-                    <span>Buka Belanjaan Toko</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/25 text-white backdrop-blur-xs border border-white/20 shadow-2xs">
-                      {counts.out + counts.low} barang
-                    </span>
-                  </div>
-                  <div className="text-[10px] font-medium text-emerald-100/90 leading-tight">
-                    Siap dicek di supermarket
-                  </div>
-                </div>
+        <div className="fixed bottom-5 left-4 right-4 max-w-sm mx-auto z-20">
+          <button
+            onClick={() => setViewMode('shopping')}
+            className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-2xl font-bold shadow-xl shadow-slate-900/25 border border-slate-800 flex items-center justify-between transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
               </div>
+              <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
+                Mode Belanja
+              </span>
+            </div>
 
-              {/* Right: Frosted Capsule Action Button */}
-              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white text-emerald-800 text-xs font-black shadow-sm shrink-0 active:bg-slate-100 transition">
-                <span>Lihat List</span>
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5] transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </button>
-          </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black">
+              <span>{counts.out + counts.low} Barang</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+            </div>
+          </button>
         </div>
       )}
 

@@ -41,57 +41,60 @@ export const StockCard: React.FC<StockCardProps> = ({
         {item.name}
       </span>
 
-      {/* Capsule Segmented Control (Smooth switch animation) */}
-      <div className="flex items-center gap-0.5 p-0.5 bg-slate-100/90 rounded-full shrink-0">
+      {/* Capsule Segmented Control (Compact & space-saving) */}
+      <div className="flex items-center gap-1 p-0.5 bg-slate-100/90 rounded-full shrink-0">
         {/* 🔴 Habis */}
         <button
           onClick={() => handleStatusClick('out')}
-          className={`py-1 px-2.5 rounded-full text-[11px] font-bold transition-all duration-200 flex items-center gap-1.5 active:scale-90 ${
+          title="Habis"
+          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
             item.status === 'out'
-              ? 'bg-rose-500 text-white shadow-xs font-black animate-pill-pop'
-              : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50/50'
+              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-rose-500 text-white shadow-xs gap-1.5 animate-pill-pop'
+              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full transition-transform duration-200 ${
-              item.status === 'out' ? 'bg-white scale-110' : 'bg-rose-500'
+            className={`rounded-full transition-all duration-200 ${
+              item.status === 'out' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-2 h-2 bg-rose-400 hover:scale-125'
             }`}
           />
-          <span>Habis</span>
+          {item.status === 'out' && <span>Habis</span>}
         </button>
 
         {/* 🟡 Menipis */}
         <button
           onClick={() => handleStatusClick('low')}
-          className={`py-1 px-2.5 rounded-full text-[11px] font-bold transition-all duration-200 flex items-center gap-1.5 active:scale-90 ${
+          title="Menipis"
+          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
             item.status === 'low'
-              ? 'bg-amber-400 text-amber-950 shadow-xs font-black animate-pill-pop'
-              : 'text-slate-500 hover:text-amber-700 hover:bg-amber-50/50'
+              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 shadow-xs gap-1.5 animate-pill-pop'
+              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full transition-transform duration-200 ${
-              item.status === 'low' ? 'bg-amber-950 scale-110' : 'bg-amber-500'
+            className={`rounded-full transition-all duration-200 ${
+              item.status === 'low' ? 'w-1.5 h-1.5 bg-amber-950 scale-110' : 'w-2 h-2 bg-amber-400 hover:scale-125'
             }`}
           />
-          <span>Menipis</span>
+          {item.status === 'low' && <span>Menipis</span>}
         </button>
 
         {/* 🟢 Aman */}
         <button
           onClick={() => handleStatusClick('good')}
-          className={`py-1 px-2.5 rounded-full text-[11px] font-bold transition-all duration-200 flex items-center gap-1.5 active:scale-90 ${
+          title="Aman"
+          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
             item.status === 'good'
-              ? 'bg-emerald-600 text-white shadow-xs font-black animate-pill-pop'
-              : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50/50'
+              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-emerald-600 text-white shadow-xs gap-1.5 animate-pill-pop'
+              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full transition-transform duration-200 ${
-              item.status === 'good' ? 'bg-white scale-110' : 'bg-emerald-500'
+            className={`rounded-full transition-all duration-200 ${
+              item.status === 'good' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-2 h-2 bg-emerald-500 hover:scale-125'
             }`}
           />
-          <span>Aman</span>
+          {item.status === 'good' && <span>Aman</span>}
         </button>
       </div>
     </div>
