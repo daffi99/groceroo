@@ -16,6 +16,7 @@ import {
 import { Filter, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CategoryIcon } from './components/CategoryIcon';
 import { PinScreen } from './components/PinScreen';
+import { SkeletonView } from './components/SkeletonView';
 import { fetchRemoteData, syncLocalToRemote } from './services/apiSync';
 
 export function App() {
@@ -31,6 +32,7 @@ export function App() {
     return !!localStorage.getItem('groceroo_pantry_pin');
   });
   const [isCloudSynced, setIsCloudSynced] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modal state for Add/Edit
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -77,6 +79,32 @@ export function App() {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isPinUnlocked]);
+
+  // Manual Force Refresh triggered when clicking Groceroo Logo
+  const handleForceRefresh = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(25);
+    }
+    fetchRemoteData()
+      .then((res) => {
+        if (res.synced) {
+          setIsCloudSynced(true);
+          if (res.categories && res.categories.length > 0) {
+            setCategories(res.categories);
+          }
+          if (res.items && res.items.length > 0) {
+            setItems(res.items);
+          }
+        }
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 500);
+      });
+  };
 
   // Sync to Neon when items change (debounced)
   const syncToCloud = (updatedItems: InventoryItem[], deletedIds?: string[]) => {
@@ -243,11 +271,16 @@ export function App() {
         onSearchChange={setSearchQuery}
         isCloudSynced={isCloudSynced}
         onLock={handleLockPantry}
+        onRefresh={handleForceRefresh}
+        isRefreshing={isRefreshing}
       />
 
       {/* Main View Switcher with Smooth Transition Animation */}
-      <div key={viewMode} className="tab-content-enter flex-1 flex flex-col">
-        {viewMode === 'shopping' ? (
+      <div key={viewMode + (isRefreshing ? '-loading' : '')} className="tab-content-enter flex-1 flex flex-col">
+        {isRefreshing ? (
+          /* Loading Skeleton when refreshing from Neon Cloud */
+          <SkeletonView />
+        ) : viewMode === 'shopping' ? (
           /* 1. SHOPPING MODE (Mode Belanja) */
           <ShoppingView
             items={items}

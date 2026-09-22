@@ -11,6 +11,8 @@ interface NavbarProps {
   onSearchChange: (q: string) => void;
   isCloudSynced?: boolean;
   onLock?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,6 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearchChange,
   isCloudSynced,
   onLock,
+  onRefresh,
+  isRefreshing,
 }) => {
   const needsBuyingCount = outCount + lowCount;
 
@@ -29,27 +33,49 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all">
       {/* Top Brand Bar */}
       <div className="max-w-md mx-auto px-4 pt-3 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          {/* Logo image from root */}
-          <img
-            src="/logo_groceroo.png"
-            alt="Groceroo"
-            className="w-10 h-10 rounded-2xl object-cover shadow-sm shadow-emerald-600/20"
-          />
-          <div>
+        {/* Clickable Logo Button for Force Cloud Sync */}
+        <button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2.5 text-left active:scale-95 transition group cursor-pointer"
+          title="Klik logo untuk refresh data dari cloud Neon"
+        >
+          {/* Logo image with spinning indicator on refresh */}
+          <div className="relative shrink-0">
+            <img
+              src="/logo_groceroo.png"
+              alt="Groceroo"
+              className={`w-10 h-10 rounded-2xl object-cover shadow-sm shadow-emerald-600/20 transition-all duration-300 ${
+                isRefreshing ? 'animate-spin opacity-80 scale-95' : 'group-hover:scale-105'
+              }`}
+            />
+            {isRefreshing && (
+              <span className="absolute inset-0 rounded-2xl ring-2 ring-emerald-500 animate-ping" />
+            )}
+          </div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-black tracking-tight text-slate-900 leading-tight">
                 Grocer<span className="text-emerald-500">oo</span>
               </h1>
               {isCloudSynced && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" title="Neon DB Terhubung" />
+                <span
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    isRefreshing ? 'bg-amber-400 animate-ping' : 'bg-emerald-500 shadow-xs'
+                  }`}
+                  title={isRefreshing ? 'Menyinkronkan...' : 'Neon DB Terhubung'}
+                />
               )}
             </div>
-            <p className="text-[11px] font-medium text-slate-400">
-              Pantry & Smart Grocery
+            <p className="text-[11px] font-medium text-slate-400 truncate">
+              {isRefreshing ? (
+                <span className="text-emerald-600 font-bold animate-pulse">Menyinkronkan stok...</span>
+              ) : (
+                <span>Pantry & Smart Grocery</span>
+              )}
             </p>
           </div>
-        </div>
+        </button>
 
         {/* Right Status Pill Badge & Lock */}
         <div className="flex items-center gap-1.5">

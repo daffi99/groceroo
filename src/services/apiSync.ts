@@ -11,11 +11,12 @@ export interface SyncResponse {
 export async function fetchRemoteData(pin?: string): Promise<SyncResponse> {
   const activePin = pin || localStorage.getItem('groceroo_pantry_pin') || '';
   try {
-    const res = await fetch('/api/sync', {
+    const res = await fetch(`/api/sync?t=${Date.now()}`, {
       method: 'GET',
       headers: {
         'x-pantry-pin': activePin,
       },
+      cache: 'no-store',
     });
 
     if (!res.ok) {

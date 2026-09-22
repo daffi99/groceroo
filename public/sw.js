@@ -1,4 +1,4 @@
-const CACHE_NAME = 'groceroo-v1';
+const CACHE_NAME = 'groceroo-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -31,7 +31,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Stale-while-revalidate strategy
+  // CRITICAL: NEVER cache API calls! Always bypass service worker for /api/
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
+  // Stale-while-revalidate strategy for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
