@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ClipboardList, SlidersHorizontal, Search, Lock } from 'lucide-react';
+import { ShoppingBag, ClipboardList, SlidersHorizontal, Search, Settings } from 'lucide-react';
 import { ViewMode } from '../types/inventory';
 
 interface NavbarProps {
@@ -10,7 +10,7 @@ interface NavbarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   isCloudSynced?: boolean;
-  onLock?: () => void;
+  onOpenSettings?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
@@ -23,7 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   searchQuery,
   onSearchChange,
   isCloudSynced,
-  onLock,
+  onOpenSettings,
   onRefresh,
   isRefreshing,
 }) => {
@@ -77,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </button>
 
-        {/* Right Status Pill Badge & Lock */}
+        {/* Right Status Pill Badge & Settings Gear Button */}
         <div className="flex items-center gap-1.5">
           {needsBuyingCount > 0 ? (
             <div className="px-3 py-1 rounded-full bg-rose-50 border border-rose-100/80 text-rose-600 font-bold text-xs flex items-center gap-1.5 shadow-2xs">
@@ -90,13 +90,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Stok aman</span>
             </div>
           )}
-          {onLock && (
+          {onOpenSettings && (
             <button
-              onClick={onLock}
-              title="Kunci Pantry PIN"
-              className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition active:scale-95"
+              onClick={onOpenSettings}
+              title="Pengaturan & Kategori"
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition active:scale-95 cursor-pointer ${
+                viewMode === 'settings'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
             >
-              <Lock className="w-3.5 h-3.5" />
+              <Settings className="w-4 h-4" />
             </button>
           )}
         </div>

@@ -22,5 +22,5 @@ export interface InventoryItem {
   lastRestocked?: string;   // ISO date string
 }
 
-export type ViewMode = 'inventory' | 'shopping' | 'manage';
+export type ViewMode = 'inventory' | 'shopping' | 'manage' | 'settings';
 export type FilterStatus = 'all' | 'out' | 'low' | 'good';

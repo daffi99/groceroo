@@ -30,12 +30,24 @@ export async function fetchRemoteData(pin?: string): Promise<SyncResponse> {
   }
 }
 
+export interface SyncPayload {
+  items?: InventoryItem[];
+  deletedIds?: string[];
+  categories?: Category[];
+  deletedCategoryIds?: string[];
+}
+
 export async function syncLocalToRemote(
-  items: InventoryItem[],
+  payloadOrItems: InventoryItem[] | SyncPayload,
   deletedIds?: string[],
   pin?: string
 ): Promise<SyncResponse> {
   const activePin = pin || localStorage.getItem('groceroo_pantry_pin') || '';
+
+  const bodyData = Array.isArray(payloadOrItems)
+    ? { items: payloadOrItems, deletedIds }
+    : payloadOrItems;
+
   try {
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -43,7 +55,7 @@ export async function syncLocalToRemote(
         'Content-Type': 'application/json',
         'x-pantry-pin': activePin,
       },
-      body: JSON.stringify({ items, deletedIds }),
+      body: JSON.stringify(bodyData),
     });
 
     if (!res.ok) {

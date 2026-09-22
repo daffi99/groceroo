@@ -4,6 +4,7 @@ import { CategoryChips } from './components/CategoryChips';
 import { StockCard } from './components/StockCard';
 import { ShoppingView } from './components/ShoppingView';
 import { ManageItemsView } from './components/ManageItemsView';
+import { SettingsView } from './components/SettingsView';
 import { ItemModal } from './components/ItemModal';
 import { IosInstallGuide } from './components/IosInstallGuide';
 import { ViewMode, FilterStatus, StockStatus, InventoryItem, Category } from './types/inventory';
@@ -211,6 +212,74 @@ export function App() {
     }
   };
 
+  const handleSaveCategory = (categoryData: {
+    id?: string;
+    name: string;
+    iconName: string;
+    accentColor: string;
+    bgColor: string;
+    borderColor: string;
+    textColor: string;
+    badgeColor: string;
+  }) => {
+    let savedCat: Category;
+    let updatedCategories: Category[];
+
+    if (categoryData.id) {
+      savedCat = {
+        id: categoryData.id,
+        name: categoryData.name,
+        iconName: categoryData.iconName,
+        emoji: '',
+        accentColor: categoryData.accentColor,
+        bgColor: categoryData.bgColor,
+        borderColor: categoryData.borderColor,
+        textColor: categoryData.textColor,
+        badgeColor: categoryData.badgeColor,
+      };
+      updatedCategories = categories.map((c) => (c.id === categoryData.id ? savedCat : c));
+    } else {
+      const newId = `cat-${Date.now()}`;
+      savedCat = {
+        id: newId,
+        name: categoryData.name,
+        iconName: categoryData.iconName,
+        emoji: '',
+        accentColor: categoryData.accentColor,
+        bgColor: categoryData.bgColor,
+        borderColor: categoryData.borderColor,
+        textColor: categoryData.textColor,
+        badgeColor: categoryData.badgeColor,
+      };
+      updatedCategories = [...categories, savedCat];
+    }
+
+    const sorted = sortCategories(updatedCategories);
+    setCategories(sorted);
+
+    // Sync to Neon DB
+    syncLocalToRemote({ categories: [savedCat] }).then((res) => {
+      if (res.synced) setIsCloudSynced(true);
+    });
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    const updatedCategories = categories.filter((c) => c.id !== categoryId);
+    const updatedItems = items.filter((i) => i.categoryId !== categoryId);
+
+    setCategories(sortCategories(updatedCategories));
+    setItems(updatedItems);
+
+    // Sync to Neon DB (both category delete and cascade)
+    syncLocalToRemote({
+      categories: updatedCategories,
+      deletedCategoryIds: [categoryId],
+      items: updatedItems,
+    }).then((res) => {
+      if (res.synced) setIsCloudSynced(true);
+    });
+  };
+
   // Filtered Items for Inventory View
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -262,7 +331,7 @@ export function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         isCloudSynced={isCloudSynced}
-        onLock={handleLockPantry}
+        onOpenSettings={() => setViewMode(viewMode === 'settings' ? 'inventory' : 'settings')}
         onRefresh={handleForceRefresh}
         isRefreshing={isRefreshing || isLoading}
       />
@@ -272,15 +341,27 @@ export function App() {
         {isLoading || isRefreshing ? (
           /* Loading Skeleton when loading or refreshing from Neon Cloud */
           <SkeletonView />
+        ) : viewMode === 'settings' ? (
+          /* 1. DEDICATED SETTINGS PAGE (Pengaturan & Kelola Kategori) */
+          <SettingsView
+            categories={categories}
+            items={items}
+            onBack={() => setViewMode('inventory')}
+            onLock={handleLockPantry}
+            onSaveCategory={handleSaveCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onResetData={handleResetData}
+            isCloudSynced={isCloudSynced}
+          />
         ) : viewMode === 'shopping' ? (
-          /* 1. SHOPPING MODE (Mode Belanja) */
+          /* 2. SHOPPING MODE (Mode Belanja) */
           <ShoppingView
             items={items}
             categories={categories}
             onUpdateStatus={handleUpdateStatus}
           />
         ) : viewMode === 'manage' ? (
-          /* 2. DEDICATED CRUD PAGE (Kelola Daftar Barang) */
+          /* 3. DEDICATED CRUD PAGE (Kelola Daftar Barang) */
           <ManageItemsView
             items={items}
             categories={categories}
@@ -290,7 +371,7 @@ export function App() {
             onResetData={handleResetData}
           />
         ) : (
-          /* 3. PANTRY INVENTORY (Cek Stok Satu Baris per Barang) */
+          /* 4. PANTRY INVENTORY (Cek Stok Satu Baris per Barang) */
           <main className="flex-1 max-w-md mx-auto w-full px-4 pt-1 pb-24">
           {/* Quick Summary Status Bar (3 Columns matching screenshot) */}
           <div className="mb-3 grid grid-cols-3 gap-2.5">

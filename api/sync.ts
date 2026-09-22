@@ -237,9 +237,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Sync updates from client to Neon DB
     if (req.method === 'POST') {
-      const { items: clientItems, deletedIds } = req.body || {};
+      const {
+        items: clientItems,
+        deletedIds,
+        categories: clientCategories,
+        deletedCategoryIds,
+      } = req.body || {};
 
-      // Handle deletions if any
+      // Handle category deletions if any (foreign key cascade deletes associated items)
+      if (Array.isArray(deletedCategoryIds) && deletedCategoryIds.length > 0) {
+        for (const catId of deletedCategoryIds) {
+          await sql`DELETE FROM categories WHERE id = ${catId};`;
+        }
+      }
+
+      // Upsert client categories
+      if (Array.isArray(clientCategories) && clientCategories.length > 0) {
+        for (const cat of clientCategories) {
+          await sql`
+            INSERT INTO categories (id, name, icon_name, accent_color, bg_color, border_color, text_color, badge_color)
+            VALUES (
+              ${cat.id},
+              ${cat.name},
+              ${cat.iconName || 'Package'},
+              ${cat.accentColor || '#10B981'},
+              ${cat.bgColor || 'bg-emerald-50'},
+              ${cat.borderColor || 'border-emerald-200'},
+              ${cat.textColor || 'text-emerald-700'},
+              ${cat.badgeColor || 'bg-emerald-100 text-emerald-800'}
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              name = EXCLUDED.name,
+              icon_name = EXCLUDED.icon_name,
+              accent_color = EXCLUDED.accent_color,
+              bg_color = EXCLUDED.bg_color,
+              border_color = EXCLUDED.border_color,
+              text_color = EXCLUDED.text_color,
+              badge_color = EXCLUDED.badge_color;
+          `;
+        }
+      }
+
+      // Handle item deletions if any
       if (Array.isArray(deletedIds) && deletedIds.length > 0) {
         for (const id of deletedIds) {
           await sql`DELETE FROM inventory_items WHERE id = ${id};`;
