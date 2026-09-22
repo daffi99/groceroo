@@ -188,7 +188,7 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Checkbox button with pop transition */}
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 shrink-0 ${
                           isBought
                             ? 'bg-emerald-500 text-white shadow-xs scale-105 animate-pill-pop'
                             : 'border-2 border-slate-300 hover:border-emerald-500'
@@ -196,6 +196,19 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
                       >
                         {isBought && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
+
+                      {/* Product Thumbnail */}
+                      {item.imageUrl && (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200/80 bg-slate-50"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      )}
 
                       {/* Name & details */}
                       <div className="min-w-0">

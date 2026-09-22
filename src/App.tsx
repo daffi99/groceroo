@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { CategoryChips } from './components/CategoryChips';
 import { StockCard } from './components/StockCard';
@@ -15,7 +15,7 @@ import {
   saveStoredPin,
 } from './services/storage';
 import { DEFAULT_CATEGORIES, DEFAULT_ITEMS, sortCategories } from './data/defaultData';
-import { Filter, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Filter, ShoppingBag, ArrowRight, ChevronLeft, ChevronRight, GalleryHorizontal, List } from 'lucide-react';
 import { CategoryIcon } from './components/CategoryIcon';
 import { PinScreen } from './components/PinScreen';
 import { SkeletonView } from './components/SkeletonView';
@@ -25,9 +25,15 @@ export function App() {
   const [categories, setCategories] = useState<Category[]>(() => sortCategories(DEFAULT_CATEGORIES));
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(() => DEFAULT_CATEGORIES[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
+
+  // Slider state for horizontal category sliding in Cek Stok
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const isScrollingRef = useRef<number | null>(null);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [layoutMode, setLayoutMode] = useState<'slide' | 'list'>('slide');
   
   // PIN & Cloud Sync State
   const [isPinUnlocked, setIsPinUnlocked] = useState(() => {
@@ -154,7 +160,8 @@ export function App() {
     name: string,
     categoryId: string,
     status: StockStatus,
-    id?: string
+    id?: string,
+    imageUrl?: string
   ) => {
     let updated: InventoryItem[];
     if (id) {
@@ -166,6 +173,7 @@ export function App() {
               name,
               categoryId,
               status,
+              imageUrl,
             }
           : item
       );
@@ -176,6 +184,7 @@ export function App() {
         name,
         categoryId,
         status,
+        imageUrl,
         lastRestocked: status === 'good' ? new Date().toISOString() : undefined,
       };
       updated = [newItem, ...items];
@@ -280,13 +289,9 @@ export function App() {
     });
   };
 
-  // Filtered Items for Inventory View
+  // Filtered Items for Inventory View (by status and search)
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Category filter
-      if (selectedCategoryId && item.categoryId !== selectedCategoryId) {
-        return false;
-      }
       // Status filter
       if (statusFilter !== 'all' && item.status !== statusFilter) {
         return false;
@@ -298,15 +303,84 @@ export function App() {
       }
       return true;
     });
-  }, [items, selectedCategoryId, statusFilter, searchQuery]);
+  }, [items, statusFilter, searchQuery]);
 
-  // Active categories for rendering
+  const isSearching = searchQuery.trim().length > 0;
+
+  // Slide navigation & scroll syncing for Cek Stok
+  const goToSlide = (index: number) => {
+    const boundedIndex = Math.max(0, Math.min(index, categories.length - 1));
+    setCurrentSlideIndex(boundedIndex);
+    setSelectedCategoryId(categories[boundedIndex]?.id ?? null);
+    if (sliderRef.current) {
+      const children = sliderRef.current.children;
+      if (children[boundedIndex]) {
+        const targetElement = children[boundedIndex] as HTMLElement;
+        const containerLeft = sliderRef.current.getBoundingClientRect().left;
+        const elementLeft = targetElement.getBoundingClientRect().left;
+        sliderRef.current.scrollBy({
+          left: elementLeft - containerLeft,
+          behavior: 'smooth',
+        });
+      }
+    }
+  };
+
+  const handleSliderScroll = () => {
+    if (!sliderRef.current) return;
+    if (isScrollingRef.current) {
+      window.cancelAnimationFrame(isScrollingRef.current);
+    }
+    isScrollingRef.current = window.requestAnimationFrame(() => {
+      if (!sliderRef.current) return;
+      const container = sliderRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const children = Array.from(container.children) as HTMLElement[];
+
+      let closestIndex = 0;
+      let minDistance = Infinity;
+
+      children.forEach((child, idx) => {
+        const childRect = child.getBoundingClientRect();
+        const distance = Math.abs(childRect.left - containerRect.left);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = idx;
+        }
+      });
+
+      if (closestIndex !== currentSlideIndex && closestIndex >= 0 && closestIndex < categories.length) {
+        setCurrentSlideIndex(closestIndex);
+        setSelectedCategoryId(categories[closestIndex]?.id ?? null);
+      }
+    });
+  };
+
+  const handleCategorySelect = (id: string | null) => {
+    if (id === null) {
+      // User clicked "Semua Kategori" -> show all categories in list view
+      setSelectedCategoryId(null);
+      setLayoutMode('list');
+    } else {
+      // User clicked a specific category chip -> switch to slide mode on that category
+      setSelectedCategoryId(id);
+      setLayoutMode('slide');
+      const index = categories.findIndex((c) => c.id === id);
+      if (index !== -1) {
+        setTimeout(() => {
+          goToSlide(index);
+        }, 30);
+      }
+    }
+  };
+
+  // Active categories for list rendering or search mode
   const activeCategories = useMemo(() => {
-    if (selectedCategoryId) {
+    if (selectedCategoryId && !isSearching && layoutMode === 'list') {
       return categories.filter((c) => c.id === selectedCategoryId);
     }
     return categories;
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, isSearching, layoutMode]);
 
   if (!isPinUnlocked) {
     return (
@@ -372,7 +446,7 @@ export function App() {
           />
         ) : (
           /* 4. PANTRY INVENTORY (Cek Stok Satu Baris per Barang) */
-          <main className="flex-1 max-w-md mx-auto w-full px-4 pt-1 pb-24">
+          <main className="flex-1 max-w-md mx-auto w-full px-4 pt-1 pb-36">
           {/* Quick Summary Status Bar (3 Columns matching screenshot) */}
           <div className="mb-3 grid grid-cols-3 gap-2.5">
             <button
@@ -438,77 +512,233 @@ export function App() {
           )}
 
           {/* Category Chips Bar */}
-          <div className="-mx-4 mb-3">
+          <div className="-mx-4 mb-2">
             <CategoryChips
               categories={categories}
-              selectedCategoryId={selectedCategoryId}
-              onSelectCategory={setSelectedCategoryId}
+              selectedCategoryId={
+                layoutMode === 'slide' && !isSearching
+                  ? (categories[currentSlideIndex]?.id || null)
+                  : selectedCategoryId
+              }
+              onSelectCategory={handleCategorySelect}
               getCategoryCounts={getCategoryCounts}
             />
           </div>
 
-          {/* Category-Grouped Item Cards */}
-          <div className="space-y-4">
-            {activeCategories.map((category) => {
-              const catItems = filteredItems.filter((i) => i.categoryId === category.id);
-              if (catItems.length === 0 && (selectedCategoryId || searchQuery || statusFilter !== 'all')) {
-                return null;
-              }
+          {/* Slide Controls & Layout Switcher */}
+          <div className="flex items-center justify-between px-1 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-bold text-slate-800 truncate">
+                {layoutMode === 'slide' && !isSearching
+                  ? `${currentSlideIndex + 1}/${categories.length}: ${categories[currentSlideIndex]?.name || ''}`
+                  : `${activeCategories.length} Kategori`}
+              </span>
 
-              return (
-                <section
-                  key={category.id}
-                  className="bg-white rounded-3xl border border-slate-200/80 p-4 shadow-xs"
-                >
-                  {/* Category Header with Lucide Icon */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className={category.textColor}>
-                        <CategoryIcon name={category.iconName} className="w-4 h-4" />
-                      </span>
-                      <h3 className="font-extrabold text-sm tracking-tight text-slate-900">
-                        {category.name}
-                      </h3>
-                    </div>
-                    <span className="text-xs font-medium text-slate-400">
-                      {catItems.length} barang
-                    </span>
-                  </div>
-
-                  {/* List of 1-Line Item Cards */}
-                  {catItems.length === 0 ? (
-                    <div className="py-4 text-center text-slate-400 text-xs">
-                      Tidak ada barang di kategori ini.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {catItems.map((item) => (
-                        <StockCard
-                          key={item.id}
-                          item={item}
-                          onUpdateStatus={handleUpdateStatus}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-
-            {filteredItems.length === 0 && (
-              <div className="py-12 text-center">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center text-2xl text-slate-400 mb-2">
-                  🔍
+              {/* Inline Pagination Dots */}
+              {layoutMode === 'slide' && !isSearching && categories.length > 1 && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {categories.map((cat, idx) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => goToSlide(idx)}
+                      className={`h-1.5 rounded-full transition-all duration-200 ${
+                        idx === currentSlideIndex
+                          ? 'w-4 bg-slate-900'
+                          : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                      title={cat.name}
+                      aria-label={`Slide ${cat.name}`}
+                    />
+                  ))}
                 </div>
-                <h4 className="text-xs font-bold text-slate-700">
-                  Tidak Ada Barang Ditemukan
-                </h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Coba sesuaikan pencarian atau reset filter.
-                </p>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {layoutMode === 'slide' && !isSearching && (
+                <>
+                  <button
+                    onClick={() => goToSlide(currentSlideIndex - 1)}
+                    disabled={currentSlideIndex === 0}
+                    className="w-7 h-7 rounded-full flex items-center justify-center border border-slate-200 bg-white text-slate-700 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-90 transition shadow-2xs"
+                    title="Kategori sebelumnya"
+                    aria-label="Kategori sebelumnya"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => goToSlide(currentSlideIndex + 1)}
+                    disabled={currentSlideIndex === categories.length - 1}
+                    className="w-7 h-7 rounded-full flex items-center justify-center border border-slate-200 bg-white text-slate-700 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-90 transition shadow-2xs"
+                    title="Kategori berikutnya"
+                    aria-label="Kategori berikutnya"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
+              {/* View Mode Toggle Button */}
+              <button
+                onClick={() => {
+                  const nextMode = layoutMode === 'slide' ? 'list' : 'slide';
+                  setLayoutMode(nextMode);
+                  if (nextMode === 'list') {
+                    setSelectedCategoryId(null);
+                  } else {
+                    setSelectedCategoryId(categories[currentSlideIndex]?.id || null);
+                  }
+                }}
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition flex items-center gap-1 shadow-2xs active:scale-95 ${
+                  layoutMode === 'slide'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+                title={layoutMode === 'slide' ? 'Ganti ke tampilan List' : 'Ganti ke tampilan Slide'}
+              >
+                {layoutMode === 'slide' ? (
+                  <>
+                    <GalleryHorizontal className="w-3 h-3" />
+                    <span>Slide</span>
+                  </>
+                ) : (
+                  <>
+                    <List className="w-3 h-3" />
+                    <span>List</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* MAIN CATEGORIES VIEW: SLIDE vs LIST */}
+          {layoutMode === 'slide' && !isSearching ? (
+            /* SLIDE MODE (Horizontal Swipeable Carousel - Exactly 100% Width) */
+            <div
+              ref={sliderRef}
+              onScroll={handleSliderScroll}
+              className="w-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-3 scroll-smooth py-1"
+            >
+              {categories.map((category) => {
+                const catItems = filteredItems.filter((i) => i.categoryId === category.id);
+                const catCounts = getCategoryCounts(category.id);
+
+                return (
+                  <section
+                    key={category.id}
+                    className="w-full shrink-0 snap-center bg-white rounded-3xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs flex flex-col"
+                  >
+                    {/* Category Header */}
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={category.textColor}>
+                          <CategoryIcon name={category.iconName} className="w-4 h-4" />
+                        </span>
+                        <h3 className="font-extrabold text-sm tracking-tight text-slate-900 truncate">
+                          {category.name}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {catCounts.out > 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded-md">
+                            {catCounts.out} habis
+                          </span>
+                        )}
+                        {catCounts.low > 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md">
+                            {catCounts.low} tipis
+                          </span>
+                        )}
+                        <span className="text-xs font-semibold text-slate-400">
+                          {catItems.length} barang
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Items inside this Category Slide */}
+                    {catItems.length === 0 ? (
+                      <div className="py-8 text-center text-slate-400 text-xs">
+                        Tidak ada barang di kategori ini.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {catItems.map((item) => (
+                          <StockCard
+                            key={item.id}
+                            item={item}
+                            onUpdateStatus={handleUpdateStatus}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            /* LIST MODE or SEARCHING (Vertical Stacked View) */
+            <div className="space-y-3.5">
+              {activeCategories.map((category) => {
+                const catItems = filteredItems.filter((i) => i.categoryId === category.id);
+                if (catItems.length === 0 && (selectedCategoryId || searchQuery || statusFilter !== 'all')) {
+                  return null;
+                }
+
+                return (
+                  <section
+                    key={category.id}
+                    className="bg-white rounded-3xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs"
+                  >
+                    {/* Category Header */}
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={category.textColor}>
+                          <CategoryIcon name={category.iconName} className="w-4 h-4" />
+                        </span>
+                        <h3 className="font-extrabold text-sm tracking-tight text-slate-900 truncate">
+                          {category.name}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-medium text-slate-400 shrink-0">
+                        {catItems.length} barang
+                      </span>
+                    </div>
+
+                    {/* List of 1-Line Item Cards */}
+                    {catItems.length === 0 ? (
+                      <div className="py-4 text-center text-slate-400 text-xs">
+                        Tidak ada barang di kategori ini.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {catItems.map((item) => (
+                          <StockCard
+                            key={item.id}
+                            item={item}
+                            onUpdateStatus={handleUpdateStatus}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+
+              {filteredItems.length === 0 && (
+                <div className="py-12 text-center">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center text-2xl text-slate-400 mb-2">
+                    🔍
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-700">
+                    Tidak Ada Barang Ditemukan
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Coba sesuaikan pencarian atau reset filter.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       )}
       </div>

@@ -133,9 +133,15 @@ async function initDbAndSeed(sql: ReturnType<typeof neon>) {
       status TEXT NOT NULL DEFAULT 'good',
       note TEXT,
       unit TEXT,
+      image_url TEXT,
       last_restocked TIMESTAMP WITH TIME ZONE,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
+  `;
+
+  // Ensure image_url column exists on existing tables
+  await sql`
+    ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS image_url TEXT;
   `;
 
   // 3. Seed initial categories if empty
@@ -230,6 +236,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           status: i.status,
           note: i.note,
           unit: i.unit,
+          imageUrl: i.image_url || undefined,
           lastRestocked: i.last_restocked,
         })),
       });
@@ -289,7 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (Array.isArray(clientItems) && clientItems.length > 0) {
         for (const item of clientItems) {
           await sql`
-            INSERT INTO inventory_items (id, name, category_id, status, note, unit, last_restocked, updated_at)
+            INSERT INTO inventory_items (id, name, category_id, status, note, unit, image_url, last_restocked, updated_at)
             VALUES (
               ${item.id},
               ${item.name},
@@ -297,6 +304,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               ${item.status},
               ${item.note || null},
               ${item.unit || null},
+              ${item.imageUrl || null},
               ${item.lastRestocked ? new Date(item.lastRestocked) : null},
               NOW()
             )
@@ -306,6 +314,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               status = EXCLUDED.status,
               note = EXCLUDED.note,
               unit = EXCLUDED.unit,
+              image_url = EXCLUDED.image_url,
               last_restocked = EXCLUDED.last_restocked,
               updated_at = NOW();
           `;
@@ -347,6 +356,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           status: i.status,
           note: i.note,
           unit: i.unit,
+          imageUrl: i.image_url || undefined,
           lastRestocked: i.last_restocked,
         })),
       });

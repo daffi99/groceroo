@@ -19,6 +19,7 @@ export interface InventoryItem {
   status: StockStatus;
   unit?: string;            // e.g. '1 pouch', '1 kg', '1 botol'
   note?: string;            // e.g. 'merek biasa', 'beli 2 gratis 1'
+  imageUrl?: string;        // URL of product image
   lastRestocked?: string;   // ISO date string
 }
 

@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const needsBuyingCount = outCount + lowCount;
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all">
+    <header className="sticky top-0 z-40 bg-white/98 backdrop-blur-md border-b border-slate-100 shadow-2xs transition-all">
       {/* Top Brand Bar */}
       <div className="max-w-md mx-auto px-4 pt-3 pb-2 flex items-center justify-between">
         {/* Clickable Logo Button for Force Cloud Sync */}

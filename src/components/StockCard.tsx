@@ -20,42 +20,55 @@ export const StockCard: React.FC<StockCardProps> = ({
 
   return (
     <div
-      className={`py-2 px-3 sm:px-3.5 rounded-2xl border transition-all duration-300 ease-out flex items-center justify-between gap-2.5 bg-white ${
+      className={`py-1.5 px-3 rounded-xl border transition-all duration-200 flex items-center justify-between gap-2 bg-white ${
         item.status === 'out'
-          ? 'border-rose-300/90 bg-rose-50/20 shadow-xs ring-1 ring-rose-500/10'
+          ? 'border-rose-300/80 bg-rose-50/20 shadow-2xs'
           : item.status === 'low'
-          ? 'border-amber-300/90 bg-amber-50/20 shadow-xs ring-1 ring-amber-500/10'
-          : 'border-slate-200/90 bg-white hover:border-slate-300'
+          ? 'border-amber-300/80 bg-amber-50/20 shadow-2xs'
+          : 'border-slate-200/80 bg-white hover:border-slate-300'
       }`}
     >
-      {/* Item Name (Smooth color transition) */}
-      <span
-        className={`font-bold text-xs sm:text-sm tracking-tight truncate flex-1 min-w-0 transition-colors duration-200 ${
-          item.status === 'out'
-            ? 'text-rose-950'
-            : item.status === 'low'
-            ? 'text-amber-950'
-            : 'text-slate-900'
-        }`}
-      >
-        {item.name}
-      </span>
+      {/* Item Thumbnail & Name (Compact & clear) */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {item.imageUrl && (
+          <img
+            src={item.imageUrl}
+            alt={item.name}
+            className="w-6 h-6 rounded-md object-cover shrink-0 border border-slate-200/80 bg-slate-50"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+        )}
+        <span
+          className={`font-bold text-xs tracking-tight truncate transition-colors duration-200 ${
+            item.status === 'out'
+              ? 'text-rose-950'
+              : item.status === 'low'
+              ? 'text-amber-950'
+              : 'text-slate-800'
+          }`}
+        >
+          {item.name}
+        </span>
+      </div>
 
-      {/* Capsule Segmented Control (Compact & space-saving) */}
-      <div className="flex items-center gap-1 p-0.5 bg-slate-100/90 rounded-full shrink-0">
+      {/* Capsule Segmented Control (Mini height & compact) */}
+      <div className="flex items-center gap-0.5 p-0.5 bg-slate-100/90 rounded-full shrink-0">
         {/* 🔴 Habis */}
         <button
           onClick={() => handleStatusClick('out')}
           title="Habis"
-          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
+          className={`transition-all duration-150 flex items-center justify-center active:scale-90 ${
             item.status === 'out'
-              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-rose-500 text-white shadow-xs gap-1.5 animate-pill-pop'
-              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
+              ? 'py-0.5 px-2 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs gap-1 animate-pill-pop'
+              : 'w-6 h-6 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`rounded-full transition-all duration-200 ${
-              item.status === 'out' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-2 h-2 bg-rose-400 hover:scale-125'
+            className={`rounded-full transition-all duration-150 ${
+              item.status === 'out' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-1.5 h-1.5 bg-rose-400'
             }`}
           />
           {item.status === 'out' && <span>Habis</span>}
@@ -65,15 +78,15 @@ export const StockCard: React.FC<StockCardProps> = ({
         <button
           onClick={() => handleStatusClick('low')}
           title="Menipis"
-          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
+          className={`transition-all duration-150 flex items-center justify-center active:scale-90 ${
             item.status === 'low'
-              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 shadow-xs gap-1.5 animate-pill-pop'
-              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
+              ? 'py-0.5 px-2 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 shadow-xs gap-1 animate-pill-pop'
+              : 'w-6 h-6 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`rounded-full transition-all duration-200 ${
-              item.status === 'low' ? 'w-1.5 h-1.5 bg-amber-950 scale-110' : 'w-2 h-2 bg-amber-400 hover:scale-125'
+            className={`rounded-full transition-all duration-150 ${
+              item.status === 'low' ? 'w-1.5 h-1.5 bg-amber-950 scale-110' : 'w-1.5 h-1.5 bg-amber-400'
             }`}
           />
           {item.status === 'low' && <span>Menipis</span>}
@@ -83,15 +96,15 @@ export const StockCard: React.FC<StockCardProps> = ({
         <button
           onClick={() => handleStatusClick('good')}
           title="Aman"
-          className={`transition-all duration-200 flex items-center justify-center active:scale-90 ${
+          className={`transition-all duration-150 flex items-center justify-center active:scale-90 ${
             item.status === 'good'
-              ? 'py-1 px-2.5 rounded-full text-[11px] font-black bg-emerald-600 text-white shadow-xs gap-1.5 animate-pill-pop'
-              : 'w-7 h-7 rounded-full hover:bg-slate-200/60'
+              ? 'py-0.5 px-2 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-xs gap-1 animate-pill-pop'
+              : 'w-6 h-6 rounded-full hover:bg-slate-200/60'
           }`}
         >
           <span
-            className={`rounded-full transition-all duration-200 ${
-              item.status === 'good' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-2 h-2 bg-emerald-500 hover:scale-125'
+            className={`rounded-full transition-all duration-150 ${
+              item.status === 'good' ? 'w-1.5 h-1.5 bg-white scale-110' : 'w-1.5 h-1.5 bg-emerald-500'
             }`}
           />
           {item.status === 'good' && <span>Aman</span>}

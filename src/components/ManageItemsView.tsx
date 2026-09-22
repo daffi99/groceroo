@@ -140,8 +140,21 @@ export const ManageItemsView: React.FC<ManageItemsViewProps> = ({
           return (
             <div
               key={item.id}
-              className="px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2 hover:bg-slate-50/70 transition"
+              className="px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2.5 hover:bg-slate-50/70 transition"
             >
+              {/* Product Thumbnail */}
+              {item.imageUrl && (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200/80 bg-slate-50"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              )}
+
               <div className="flex-1 min-w-0 pr-1">
                 <div className="font-bold text-xs sm:text-sm text-slate-800 truncate">
                   {item.name}
