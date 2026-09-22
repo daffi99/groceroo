@@ -24,7 +24,7 @@ export const ManageItemsView: React.FC<ManageItemsViewProps> = ({
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    const list = items.filter((item) => {
       if (selectedCatId && item.categoryId !== selectedCatId) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -32,7 +32,18 @@ export const ManageItemsView: React.FC<ManageItemsViewProps> = ({
       }
       return true;
     });
-  }, [items, selectedCatId, searchQuery]);
+
+    // Sort items according to category order (Bumbu & Dapur -> Kulkas -> Sayur -> etc.)
+    const categoryOrderMap = new Map<string, number>();
+    categories.forEach((cat, idx) => categoryOrderMap.set(cat.id, idx));
+
+    return list.sort((a, b) => {
+      const orderA = categoryOrderMap.get(a.categoryId) ?? 999;
+      const orderB = categoryOrderMap.get(b.categoryId) ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name, 'id');
+    });
+  }, [items, selectedCatId, searchQuery, categories]);
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, Category>();

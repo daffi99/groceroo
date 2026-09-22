@@ -196,7 +196,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Retrieve latest categories & items
     if (req.method === 'GET') {
-      const categories = await sql`SELECT * FROM categories ORDER BY id ASC;`;
+      const categories = await sql`
+        SELECT * FROM categories 
+        ORDER BY CASE id
+          WHEN 'kitchen-spices' THEN 1
+          WHEN 'fridge-protein' THEN 2
+          WHEN 'fresh-produce' THEN 3
+          WHEN 'staples-dry' THEN 4
+          WHEN 'cleaning-toiletries' THEN 5
+          WHEN 'snacks-drinks' THEN 6
+          ELSE 99
+        END ASC;
+      `;
       const items = await sql`SELECT * FROM inventory_items ORDER BY id ASC;`;
 
       return res.status(200).json({
@@ -263,7 +274,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Return refreshed state
-      const categories = await sql`SELECT * FROM categories ORDER BY id ASC;`;
+      const categories = await sql`
+        SELECT * FROM categories 
+        ORDER BY CASE id
+          WHEN 'kitchen-spices' THEN 1
+          WHEN 'fridge-protein' THEN 2
+          WHEN 'fresh-produce' THEN 3
+          WHEN 'staples-dry' THEN 4
+          WHEN 'cleaning-toiletries' THEN 5
+          WHEN 'snacks-drinks' THEN 6
+          ELSE 99
+        END ASC;
+      `;
       const items = await sql`SELECT * FROM inventory_items ORDER BY id ASC;`;
 
       return res.status(200).json({

@@ -13,7 +13,7 @@ import {
   getStoredPin,
   saveStoredPin,
 } from './services/storage';
-import { DEFAULT_CATEGORIES, DEFAULT_ITEMS } from './data/defaultData';
+import { DEFAULT_CATEGORIES, DEFAULT_ITEMS, sortCategories } from './data/defaultData';
 import { Filter, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CategoryIcon } from './components/CategoryIcon';
 import { PinScreen } from './components/PinScreen';
@@ -21,7 +21,7 @@ import { SkeletonView } from './components/SkeletonView';
 import { fetchRemoteData, syncLocalToRemote } from './services/apiSync';
 
 export function App() {
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(() => sortCategories(DEFAULT_CATEGORIES));
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function App() {
         if (res.synced) {
           setIsCloudSynced(true);
           if (res.categories && res.categories.length > 0) {
-            setCategories(res.categories);
+            setCategories(sortCategories(res.categories));
           }
           if (res.items) {
             setItems(res.items);
@@ -80,7 +80,7 @@ export function App() {
         if (res.synced) {
           setIsCloudSynced(true);
           if (res.categories && res.categories.length > 0) {
-            setCategories(res.categories);
+            setCategories(sortCategories(res.categories));
           }
           if (res.items) {
             setItems(res.items);

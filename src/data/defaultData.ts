@@ -1,5 +1,25 @@
 import { Category, InventoryItem } from '../types/inventory';
 
+export const CATEGORY_ORDER = [
+  'kitchen-spices',      // 1. Bumbu & Dapur
+  'fridge-protein',      // 2. Kulkas & Protein
+  'fresh-produce',       // 3. Sayur & Buah
+  'staples-dry',         // 4. Bahan Pokok
+  'cleaning-toiletries', // 5. Kamar Mandi & Cuci
+  'snacks-drinks',       // 6. Camilan & Minum
+];
+
+export const sortCategories = (categories: Category[]): Category[] => {
+  return [...categories].sort((a, b) => {
+    const idxA = CATEGORY_ORDER.indexOf(a.id);
+    const idxB = CATEGORY_ORDER.indexOf(b.id);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.name.localeCompare(b.name, 'id');
+  });
+};
+
 export const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'kitchen-spices',
