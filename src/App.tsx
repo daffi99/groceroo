@@ -6,13 +6,14 @@ import { ShoppingView } from './components/ShoppingView';
 import { ManageItemsView } from './components/ManageItemsView';
 import { ItemModal } from './components/ItemModal';
 import { IosInstallGuide } from './components/IosInstallGuide';
-import { ViewMode, FilterStatus, StockStatus, InventoryItem } from './types/inventory';
+import { ViewMode, FilterStatus, StockStatus, InventoryItem, Category } from './types/inventory';
 import {
-  getStoredCategories,
-  getStoredItems,
-  saveStoredItems,
-  resetToDefaultData,
+  clearLegacyStorage,
+  clearStoredPin,
+  getStoredPin,
+  saveStoredPin,
 } from './services/storage';
+import { DEFAULT_CATEGORIES, DEFAULT_ITEMS } from './data/defaultData';
 import { Filter, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CategoryIcon } from './components/CategoryIcon';
 import { PinScreen } from './components/PinScreen';
@@ -20,8 +21,8 @@ import { SkeletonView } from './components/SkeletonView';
 import { fetchRemoteData, syncLocalToRemote } from './services/apiSync';
 
 export function App() {
-  const [categories, setCategories] = useState(getStoredCategories);
-  const [items, setItems] = useState<InventoryItem[]>(getStoredItems);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [items, setItems] = useState<InventoryItem[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,9 +30,10 @@ export function App() {
   
   // PIN & Cloud Sync State
   const [isPinUnlocked, setIsPinUnlocked] = useState(() => {
-    return !!localStorage.getItem('groceroo_pantry_pin');
+    return !!getStoredPin();
   });
   const [isCloudSynced, setIsCloudSynced] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modal state for Add/Edit
@@ -39,50 +41,36 @@ export function App() {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [activeAddCategoryId, setActiveAddCategoryId] = useState<string | undefined>(undefined);
 
-  // Auto-save items to localStorage whenever they change
+  // Clear any legacy localStorage items/categories on startup
   useEffect(() => {
-    saveStoredItems(items);
-  }, [items]);
+    clearLegacyStorage();
+  }, []);
 
-  // Initial cloud fetch from Neon & auto-refresh on focus/tab resume
+  // Initial cloud fetch from Neon when PIN unlocked
   useEffect(() => {
     if (!isPinUnlocked) return;
 
-    const pullRemote = () => {
-      fetchRemoteData().then((res) => {
+    setIsLoading(true);
+    fetchRemoteData()
+      .then((res) => {
         if (res.synced) {
           setIsCloudSynced(true);
           if (res.categories && res.categories.length > 0) {
             setCategories(res.categories);
           }
-          if (res.items && res.items.length > 0) {
+          if (res.items) {
             setItems(res.items);
           }
         }
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-    };
-
-    pullRemote();
-
-    const handleFocus = () => pullRemote();
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        pullRemote();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
   }, [isPinUnlocked]);
 
   // Manual Force Refresh triggered when clicking Groceroo Logo
   const handleForceRefresh = () => {
-    if (isRefreshing) return;
+    if (isRefreshing || isLoading) return;
     setIsRefreshing(true);
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(25);
@@ -94,7 +82,7 @@ export function App() {
           if (res.categories && res.categories.length > 0) {
             setCategories(res.categories);
           }
-          if (res.items && res.items.length > 0) {
+          if (res.items) {
             setItems(res.items);
           }
         }
@@ -102,11 +90,11 @@ export function App() {
       .finally(() => {
         setTimeout(() => {
           setIsRefreshing(false);
-        }, 500);
+        }, 400);
       });
   };
 
-  // Sync to Neon when items change (debounced)
+  // Sync to Neon when items change (optimistic + remote)
   const syncToCloud = (updatedItems: InventoryItem[], deletedIds?: string[]) => {
     if (!isPinUnlocked) return;
     syncLocalToRemote(updatedItems, deletedIds).then((res) => {
@@ -196,8 +184,9 @@ export function App() {
   };
 
   const handleLockPantry = () => {
-    localStorage.removeItem('groceroo_pantry_pin');
+    clearStoredPin();
     setIsPinUnlocked(false);
+    setItems([]);
   };
 
   const handleOpenAddModal = (catId?: string) => {
@@ -213,12 +202,12 @@ export function App() {
 
   const handleResetData = () => {
     if (window.confirm('Kembalikan semua daftar ke contoh bawaan awal?')) {
-      const reset = resetToDefaultData();
-      setCategories(reset.categories);
-      setItems(reset.items);
+      setCategories(DEFAULT_CATEGORIES);
+      setItems(DEFAULT_ITEMS);
       setSelectedCategoryId(null);
       setSearchQuery('');
       setStatusFilter('all');
+      syncToCloud(DEFAULT_ITEMS);
     }
   };
 
@@ -253,7 +242,10 @@ export function App() {
   if (!isPinUnlocked) {
     return (
       <PinScreen
-        onSuccess={() => setIsPinUnlocked(true)}
+        onSuccess={(pin) => {
+          saveStoredPin(pin);
+          setIsPinUnlocked(true);
+        }}
         onSkipOffline={() => setIsPinUnlocked(true)}
       />
     );
@@ -272,13 +264,13 @@ export function App() {
         isCloudSynced={isCloudSynced}
         onLock={handleLockPantry}
         onRefresh={handleForceRefresh}
-        isRefreshing={isRefreshing}
+        isRefreshing={isRefreshing || isLoading}
       />
 
       {/* Main View Switcher with Smooth Transition Animation */}
-      <div key={viewMode + (isRefreshing ? '-loading' : '')} className="tab-content-enter flex-1 flex flex-col">
-        {isRefreshing ? (
-          /* Loading Skeleton when refreshing from Neon Cloud */
+      <div key={viewMode + (isLoading || isRefreshing ? '-loading' : '')} className="tab-content-enter flex-1 flex flex-col">
+        {isLoading || isRefreshing ? (
+          /* Loading Skeleton when loading or refreshing from Neon Cloud */
           <SkeletonView />
         ) : viewMode === 'shopping' ? (
           /* 1. SHOPPING MODE (Mode Belanja) */

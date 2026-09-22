@@ -197,7 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // GET: Retrieve latest categories & items
     if (req.method === 'GET') {
       const categories = await sql`SELECT * FROM categories ORDER BY id ASC;`;
-      const items = await sql`SELECT * FROM inventory_items ORDER BY updated_at DESC;`;
+      const items = await sql`SELECT * FROM inventory_items ORDER BY id ASC;`;
 
       return res.status(200).json({
         synced: true,
@@ -264,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Return refreshed state
       const categories = await sql`SELECT * FROM categories ORDER BY id ASC;`;
-      const items = await sql`SELECT * FROM inventory_items ORDER BY updated_at DESC;`;
+      const items = await sql`SELECT * FROM inventory_items ORDER BY id ASC;`;
 
       return res.status(200).json({
         synced: true,

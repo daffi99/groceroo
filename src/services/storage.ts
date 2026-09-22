@@ -1,54 +1,45 @@
-import { Category, InventoryItem } from '../types/inventory';
-import { DEFAULT_CATEGORIES, DEFAULT_ITEMS } from '../data/defaultData';
+const PIN_KEY = 'groceroo_pantry_pin';
 
-const STORAGE_KEYS = {
-  CATEGORIES: 'groceroo_categories_v2',
-  ITEMS: 'groceroo_items_v2',
-};
-
-export const getStoredCategories = (): Category[] => {
+export const getStoredPin = (): string => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    if (!raw) return DEFAULT_CATEGORIES;
-    return JSON.parse(raw);
+    return localStorage.getItem(PIN_KEY) || '';
   } catch {
-    return DEFAULT_CATEGORIES;
+    return '';
   }
 };
 
-export const saveStoredCategories = (categories: Category[]): void => {
+export const saveStoredPin = (pin: string): void => {
   try {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+    localStorage.setItem(PIN_KEY, pin);
   } catch (e) {
-    console.error('Failed to save categories', e);
+    console.error('Failed to save PIN', e);
   }
 };
 
-export const getStoredItems = (): InventoryItem[] => {
+export const clearStoredPin = (): void => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.ITEMS);
-    if (!raw) return DEFAULT_ITEMS;
-    return JSON.parse(raw);
-  } catch {
-    return DEFAULT_ITEMS;
-  }
-};
-
-export const saveStoredItems = (items: InventoryItem[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.ITEMS, JSON.stringify(items));
+    localStorage.removeItem(PIN_KEY);
   } catch (e) {
-    console.error('Failed to save items', e);
+    console.error('Failed to clear PIN', e);
   }
 };
 
-export const resetToDefaultData = (): { categories: Category[]; items: InventoryItem[] } => {
-  localStorage.removeItem('groceroo_categories_v1');
-  localStorage.removeItem('groceroo_items_v1');
-  localStorage.removeItem('groceroo_categories_v2');
-  localStorage.removeItem('groceroo_items_v2');
-  return {
-    categories: DEFAULT_CATEGORIES,
-    items: DEFAULT_ITEMS,
-  };
+/**
+ * Purges legacy localStorage items and categories so that Neon DB
+ * is the single source of truth across all devices.
+ */
+export const clearLegacyStorage = (): void => {
+  try {
+    const keysToRemove = [
+      'groceroo_categories_v1',
+      'groceroo_items_v1',
+      'groceroo_categories_v2',
+      'groceroo_items_v2',
+      'groceroo_categories',
+      'groceroo_items',
+    ];
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (e) {
+    console.error('Failed to clear legacy storage', e);
+  }
 };
