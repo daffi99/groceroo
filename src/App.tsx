@@ -32,6 +32,9 @@ export function App() {
   // Slider state for horizontal category sliding in Cek Stok
   const sliderRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef<number | null>(null);
+  const currentSlideIndexRef = useRef(0);
+  const isProgrammaticScrollRef = useRef(false);
+  const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'slide' | 'list'>('slide');
   
@@ -310,16 +313,24 @@ export function App() {
   // Slide navigation & scroll syncing for Cek Stok
   const goToSlide = (index: number) => {
     const boundedIndex = Math.max(0, Math.min(index, categories.length - 1));
+    currentSlideIndexRef.current = boundedIndex;
     setCurrentSlideIndex(boundedIndex);
     setSelectedCategoryId(categories[boundedIndex]?.id ?? null);
+
+    isProgrammaticScrollRef.current = true;
+    if (programmaticScrollTimeoutRef.current) {
+      clearTimeout(programmaticScrollTimeoutRef.current);
+    }
+    programmaticScrollTimeoutRef.current = setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 450);
+
     if (sliderRef.current) {
       const children = sliderRef.current.children;
       if (children[boundedIndex]) {
         const targetElement = children[boundedIndex] as HTMLElement;
-        const containerLeft = sliderRef.current.getBoundingClientRect().left;
-        const elementLeft = targetElement.getBoundingClientRect().left;
-        sliderRef.current.scrollBy({
-          left: elementLeft - containerLeft,
+        sliderRef.current.scrollTo({
+          left: targetElement.offsetLeft,
           behavior: 'smooth',
         });
       }
@@ -328,11 +339,13 @@ export function App() {
 
   const handleSliderScroll = () => {
     if (!sliderRef.current) return;
+    if (isProgrammaticScrollRef.current) return;
+
     if (isScrollingRef.current) {
       window.cancelAnimationFrame(isScrollingRef.current);
     }
     isScrollingRef.current = window.requestAnimationFrame(() => {
-      if (!sliderRef.current) return;
+      if (!sliderRef.current || isProgrammaticScrollRef.current) return;
       const container = sliderRef.current;
       const containerRect = container.getBoundingClientRect();
       const children = Array.from(container.children) as HTMLElement[];
@@ -349,12 +362,29 @@ export function App() {
         }
       });
 
-      if (closestIndex !== currentSlideIndex && closestIndex >= 0 && closestIndex < categories.length) {
+      if (closestIndex !== currentSlideIndexRef.current && closestIndex >= 0 && closestIndex < categories.length) {
+        currentSlideIndexRef.current = closestIndex;
         setCurrentSlideIndex(closestIndex);
         setSelectedCategoryId(categories[closestIndex]?.id ?? null);
       }
     });
   };
+
+  // Listen for scrollend to guarantee accurate snap settlement on mobile touch
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const onScrollEnd = () => {
+      if (isProgrammaticScrollRef.current) return;
+      handleSliderScroll();
+    };
+
+    slider.addEventListener('scrollend', onScrollEnd);
+    return () => {
+      slider.removeEventListener('scrollend', onScrollEnd);
+    };
+  }, [categories, layoutMode]);
 
   const handleCategorySelect = (id: string | null) => {
     if (id === null) {
@@ -367,6 +397,8 @@ export function App() {
       setLayoutMode('slide');
       const index = categories.findIndex((c) => c.id === id);
       if (index !== -1) {
+        currentSlideIndexRef.current = index;
+        setCurrentSlideIndex(index);
         setTimeout(() => {
           goToSlide(index);
         }, 30);
@@ -617,6 +649,12 @@ export function App() {
             <div
               ref={sliderRef}
               onScroll={handleSliderScroll}
+              onTouchStart={() => {
+                isProgrammaticScrollRef.current = false;
+              }}
+              onMouseDown={() => {
+                isProgrammaticScrollRef.current = false;
+              }}
               className="w-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-3 scroll-smooth py-1"
             >
               {categories.map((category) => {

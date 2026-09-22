@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { LayoutGrid } from 'lucide-react';
 import { Category } from '../types/inventory';
 import { CategoryIcon } from './CategoryIcon';
@@ -16,14 +16,49 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
   onSelectCategory,
   getCategoryCounts,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chipRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+
+  // Auto-scroll the active chip into view (centered) whenever selectedCategoryId changes
+  useEffect(() => {
+    const key = selectedCategoryId ?? 'all';
+    const activeEl = chipRefs.current[key];
+    const container = containerRef.current;
+
+    if (activeEl && container) {
+      const containerRect = container.getBoundingClientRect();
+      const chipRect = activeEl.getBoundingClientRect();
+
+      // Absolute horizontal position of the chip relative to container scroll content
+      const chipStart = container.scrollLeft + (chipRect.left - containerRect.left);
+
+      // Desired scrollLeft to center the chip in the visible container width
+      const targetScrollLeft = Math.max(
+        0,
+        chipStart - containerRect.width / 2 + chipRect.width / 2
+      );
+
+      container.scrollTo({
+        left: targetScrollLeft,
+        behavior: 'smooth',
+      });
+    }
+  }, [selectedCategoryId]);
+
   return (
-    <div className="w-full overflow-x-auto no-scrollbar py-1 px-4 flex items-center gap-2 max-w-md mx-auto">
+    <div
+      ref={containerRef}
+      className="w-full overflow-x-auto no-scrollbar py-1 px-4 flex items-center gap-2 max-w-md mx-auto scroll-smooth"
+    >
       {/* "Semua Kategori" Pill */}
       <button
+        ref={(el) => {
+          chipRefs.current['all'] = el;
+        }}
         onClick={() => onSelectCategory(null)}
         className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 active:scale-95 shadow-2xs ${
           selectedCategoryId === null
-            ? 'bg-slate-950 text-white border border-slate-950'
+            ? 'bg-slate-950 text-white border border-slate-950 ring-2 ring-emerald-500/30'
             : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
         }`}
       >
@@ -40,6 +75,9 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
         return (
           <button
             key={cat.id}
+            ref={(el) => {
+              chipRefs.current[cat.id] = el;
+            }}
             onClick={() => onSelectCategory(isSelected ? null : cat.id)}
             className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 active:scale-95 shadow-2xs ${
               isSelected
